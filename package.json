@@ -1,13 +1,22 @@
 {
   "name": "nba-callcheck-extension",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:production": "vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "package": "npm run build:production && npm run package:zip",
+    "package:zip": "cd dist && zip -r ../nba-callcheck-extension-v1.0.0.zip . -x '*.DS_Store' '*.git*'",
+    "package:chrome": "npm run package",
+    "package:firefox": "npm run build:production && cd dist && zip -r ../nba-callcheck-firefox-v1.0.0.xpi . -x '*.DS_Store' '*.git*'",
+    "package:edge": "npm run package",
+    "test:extension": "echo 'Extension testing not yet implemented'",
+    "validate:manifest": "echo 'Manifest validation not yet implemented'",
+    "store:prepare": "npm run package:chrome && npm run package:firefox && npm run package:edge && echo 'All store packages ready for submission'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -30,5 +39,35 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
+  },
+  "keywords": [
+    "nba",
+    "basketball",
+    "referee",
+    "sports",
+    "analytics",
+    "voting",
+    "browser-extension",
+    "chrome-extension",
+    "firefox-addon"
+  ],
+  "author": {
+    "name": "NBA CallCheck Team",
+    "email": "developer@nbacallcheck.com",
+    "url": "https://nbacallcheck.com"
+  },
+  "license": "MIT",
+  "homepage": "https://nbacallcheck.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nbacallcheck/extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nbacallcheck/extension/issues",
+    "email": "support@nbacallcheck.com"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
