@@ -78,21 +78,26 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
     loadVotes();
 
-    // Subscribe to real-time updates
-    try {
-      channelRef.current = votesService.getVoteChannel(callId, (payload) => {
-        if (payload.new) {
-          setVotes({
-            correct: payload.new.correct_votes,
-            incorrect: payload.new.incorrect_votes,
-            unclear: payload.new.unclear_votes
-          });
+    // Subscribe to real-time updates only if we don't already have a channel
+    if (!channelRef.current) {
+      try {
+        channelRef.current = votesService.getVoteChannel(callId, (payload) => {
+          if (payload.new) {
+            setVotes({
+              correct: payload.new.correct_votes,
+              incorrect: payload.new.incorrect_votes,
+              unclear: payload.new.unclear_votes
+            });
+          }
+        });
+        
+        // Only subscribe if the channel state is not already 'joined'
+        if (channelRef.current.state !== 'joined') {
+          channelRef.current.subscribe();
         }
-      });
-      
-      channelRef.current.subscribe();
-    } catch (err) {
-      console.error('Failed to setup subscription:', err);
+      } catch (err) {
+        console.error('Failed to setup subscription:', err);
+      }
     }
 
     return () => {
