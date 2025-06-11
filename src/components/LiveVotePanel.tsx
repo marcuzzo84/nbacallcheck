@@ -91,7 +91,10 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         }
       });
       
-      channelRef.current.subscribe();
+      // Only subscribe if the channel is not already joined or joining
+      if (channelRef.current && channelRef.current.state !== 'joined' && channelRef.current.state !== 'joining') {
+        channelRef.current.subscribe();
+      }
     } catch (err) {
       console.error('Failed to setup subscription:', err);
     }
