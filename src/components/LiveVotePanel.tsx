@@ -43,12 +43,14 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   }, [total]);
 
   useEffect(() => {
-    if (!isConnected) return;
-
-    // Clean up existing channel before creating a new one
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
+    if (!isConnected) {
+      // Clean up channel if disconnected
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
     }
 
     // Load initial vote data
@@ -95,6 +97,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
     return () => {
       if (channelRef.current) {
+        channelRef.current.unsubscribe();
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
