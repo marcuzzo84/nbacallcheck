@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Settings, ExternalLink, Database, Wifi, WifiOff, Maximize2, User, LogIn } from 'lucide-react';
+import { Settings, ExternalLink, Database, Wifi, WifiOff, Maximize2, User, LogIn, BarChart3 } from 'lucide-react';
 import CallSelector from './components/CallSelector';
 import EnhancedReplayCard from './components/EnhancedReplayCard';
 import LiveVotePanel from './components/LiveVotePanel';
@@ -10,6 +10,7 @@ import FullscreenView from './components/FullscreenView';
 import AuthModal from './components/AuthModal';
 import UserProfile from './components/UserProfile';
 import SubscriptionModal from './components/SubscriptionModal';
+import AnalyticsModal from './components/AnalyticsModal';
 import { mockCallsData, mockVotesData, mockPlayerStats } from './data/enhancedMockData';
 import { CallData } from './lib/supabase';
 import { useAuth } from './hooks/useAuth';
@@ -23,9 +24,10 @@ function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  const { user, loading } = useAuth();
+  const { user, loading, hasFeatureAccess } = useAuth();
   const currentCall = calls[currentCallIndex];
   const currentVotes = mockVotesData[currentCall.id as keyof typeof mockVotesData] || { correct: 0, incorrect: 0, unclear: 0 };
 
@@ -96,6 +98,17 @@ function App() {
                 title={isConnected ? 'Connected to live data' : 'Using mock data'}
               >
                 {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+              </button>
+              <button 
+                onClick={() => setShowAnalytics(true)}
+                className={`p-2 rounded-lg transition-colors ${
+                  hasFeatureAccess('advanced_analytics')
+                    ? 'bg-purple-800 hover:bg-purple-700 text-purple-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                }`}
+                title="Advanced Analytics"
+              >
+                <BarChart3 className="w-4 h-4" />
               </button>
               <button className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
                 <Database className="w-4 h-4 text-slate-400" />
@@ -240,6 +253,11 @@ function App() {
       <SubscriptionModal
         isOpen={showSubscription}
         onClose={() => setShowSubscription(false)}
+      />
+
+      <AnalyticsModal
+        isOpen={showAnalytics}
+        onClose={() => setShowAnalytics(false)}
       />
 
       <SettingsPanel

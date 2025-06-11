@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Minimize2, Settings, Database, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Minimize2, Settings, Database, Wifi, WifiOff, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import CallSelector from './CallSelector';
 import EnhancedReplayCard from './EnhancedReplayCard';
 import LiveVotePanel from './LiveVotePanel';
 import EnhancedStatsPanel from './EnhancedStatsPanel';
 import SettingsPanel from './SettingsPanel';
+import AnalyticsModal from './AnalyticsModal';
 import { CallData } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 interface FullscreenViewProps {
   isOpen: boolean;
@@ -31,7 +33,9 @@ const FullscreenView: React.FC<FullscreenViewProps> = ({
   mockPlayerStats
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [layout, setLayout] = useState<'grid' | 'sidebar'>('grid');
+  const { hasFeatureAccess } = useAuth();
 
   const currentCall = calls[currentCallIndex];
   const currentVotes = mockVotesData[currentCall?.id as keyof typeof mockVotesData] || { correct: 0, incorrect: 0, unclear: 0 };
@@ -107,6 +111,18 @@ const FullscreenView: React.FC<FullscreenViewProps> = ({
               title="Toggle Connection"
             >
               <Database className="w-5 h-5 text-slate-300" />
+            </button>
+
+            <button
+              onClick={() => setShowAnalytics(true)}
+              className={`p-3 rounded-lg transition-colors ${
+                hasFeatureAccess('advanced_analytics')
+                  ? 'bg-purple-700 hover:bg-purple-600 text-purple-300'
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-400'
+              }`}
+              title="Advanced Analytics"
+            >
+              <BarChart3 className="w-5 h-5" />
             </button>
             
             <button
@@ -220,7 +236,12 @@ const FullscreenView: React.FC<FullscreenViewProps> = ({
         </div>
       </div>
 
-      {/* Settings Panel */}
+      {/* Modals */}
+      <AnalyticsModal
+        isOpen={showAnalytics}
+        onClose={() => setShowAnalytics(false)}
+      />
+
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
