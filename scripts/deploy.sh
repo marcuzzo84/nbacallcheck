@@ -35,53 +35,36 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo ""
-echo "🔨 Building production version..."
+echo "🔨 Building and packaging all store versions..."
 
-# Clean previous builds
+# Clean previous builds and packages
 if [ -d "dist" ]; then
     rm -rf dist
     echo "🧹 Cleaned previous build"
 fi
 
-# Build production version
-npm run build:production
-
-if [ ! -d "dist" ]; then
-    echo "❌ Error: Build failed - dist directory not found"
-    exit 1
+if [ -d "packages" ]; then
+    rm -rf packages
+    echo "🧹 Cleaned previous packages"
 fi
 
-echo "✅ Production build completed"
+# Use the existing npm script that handles the complete workflow
+npm run store:prepare
 
-echo ""
-echo "📦 Creating store packages..."
-
-# Create packages directory
-mkdir -p packages
-
-# Chrome Web Store package
-echo "🌐 Creating Chrome Web Store package..."
-cd dist
-zip -r ../packages/nba-callcheck-chrome-v1.0.0.zip . -x '*.DS_Store' '*.git*'
-cd ..
-echo "✅ Chrome package: packages/nba-callcheck-chrome-v1.0.0.zip"
-
-# Firefox Add-ons package
-echo "🦊 Creating Firefox Add-ons package..."
-cd dist
-zip -r ../packages/nba-callcheck-firefox-v1.0.0.xpi . -x '*.DS_Store' '*.git*'
-cd ..
-echo "✅ Firefox package: packages/nba-callcheck-firefox-v1.0.0.xpi"
-
-# Edge Add-ons package (same as Chrome)
-echo "🔷 Creating Edge Add-ons package..."
-cp packages/nba-callcheck-chrome-v1.0.0.zip packages/nba-callcheck-edge-v1.0.0.zip
-echo "✅ Edge package: packages/nba-callcheck-edge-v1.0.0.zip"
+# Verify packages were created
+if [ ! -d "packages" ]; then
+    echo "❌ Error: Package creation failed - packages directory not found"
+    exit 1
+fi
 
 echo ""
 echo "📊 Package Summary:"
 echo "==================="
 ls -la packages/
+
+echo ""
+echo "📦 Package sizes:"
+du -h packages/*
 
 echo ""
 echo "🎯 Deployment Checklist:"
