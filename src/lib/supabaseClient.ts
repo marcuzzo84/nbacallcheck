@@ -505,15 +505,22 @@ export const seasonsService = {
 export const votesService = {
   // Submit a vote (with user authentication support)
   async submitVote(callId: string, voteType: 'correct' | 'incorrect' | 'unclear', ipAddress?: string, userId?: string) {
+    // Prepare the vote data
+    const voteData: any = {
+      call_id: callId,
+      vote_type: voteType,
+      user_id: userId
+    };
+
+    // Only include ip_address for authenticated users, let database handle it for anonymous users
+    if (userId) {
+      voteData.ip_address = ipAddress;
+    }
+
     // Use upsert to handle both new votes and vote updates
     const { data, error } = await supabase
       .from('votes')
-      .upsert({
-        call_id: callId,
-        vote_type: voteType,
-        ip_address: ipAddress,
-        user_id: userId
-      }, {
+      .upsert(voteData, {
         // Set the conflict resolution based on whether we have a user_id or ip_address
         onConflict: userId ? 'call_id,user_id' : 'call_id,ip_address'
       });

@@ -43,13 +43,14 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   }, [total]);
 
   useEffect(() => {
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      channelRef.current.unsubscribe();
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     if (!isConnected) {
-      // Clean up channel if disconnected
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
       return;
     }
 
@@ -78,28 +79,24 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
     loadVotes();
 
-    // Subscribe to real-time updates only if we don't already have a channel
-    if (!channelRef.current) {
-      try {
-        channelRef.current = votesService.getVoteChannel(callId, (payload) => {
-          if (payload.new) {
-            setVotes({
-              correct: payload.new.correct_votes,
-              incorrect: payload.new.incorrect_votes,
-              unclear: payload.new.unclear_votes
-            });
-          }
-        });
-        
-        // Only subscribe if the channel state is not already 'joined'
-        if (channelRef.current.state !== 'joined') {
-          channelRef.current.subscribe();
+    // Create and subscribe to new channel
+    try {
+      channelRef.current = votesService.getVoteChannel(callId, (payload) => {
+        if (payload.new) {
+          setVotes({
+            correct: payload.new.correct_votes,
+            incorrect: payload.new.incorrect_votes,
+            unclear: payload.new.unclear_votes
+          });
         }
-      } catch (err) {
-        console.error('Failed to setup subscription:', err);
-      }
+      });
+      
+      channelRef.current.subscribe();
+    } catch (err) {
+      console.error('Failed to setup subscription:', err);
     }
 
+    // Cleanup function
     return () => {
       if (channelRef.current) {
         channelRef.current.unsubscribe();
