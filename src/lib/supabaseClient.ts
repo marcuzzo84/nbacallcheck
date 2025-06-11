@@ -198,6 +198,44 @@ export interface Database {
           updated_at?: string;
         };
       };
+      user_profiles: {
+        Row: {
+          id: string;
+          email: string;
+          username: string | null;
+          avatar_url: string | null;
+          subscription_tier: 'free' | 'pro' | 'premium';
+          subscription_status: 'active' | 'inactive' | 'cancelled';
+          subscription_expires_at: string | null;
+          total_votes: number;
+          accuracy_score: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          username?: string | null;
+          avatar_url?: string | null;
+          subscription_tier?: 'free' | 'pro' | 'premium';
+          subscription_status?: 'active' | 'inactive' | 'cancelled';
+          subscription_expires_at?: string | null;
+          total_votes?: number;
+          accuracy_score?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          username?: string | null;
+          avatar_url?: string | null;
+          subscription_tier?: 'free' | 'pro' | 'premium';
+          subscription_status?: 'active' | 'inactive' | 'cancelled';
+          subscription_expires_at?: string | null;
+          total_votes?: number;
+          accuracy_score?: number | null;
+          created_at?: string;
+        };
+      };
     };
   };
 }
@@ -243,14 +281,15 @@ export const callsService = {
 };
 
 export const votesService = {
-  // Submit a vote
-  async submitVote(callId: string, voteType: 'correct' | 'incorrect' | 'unclear', ipAddress?: string) {
+  // Submit a vote (with user authentication support)
+  async submitVote(callId: string, voteType: 'correct' | 'incorrect' | 'unclear', ipAddress?: string, userId?: string) {
     const { data, error } = await supabase
       .from('votes')
       .insert({
         call_id: callId,
         vote_type: voteType,
-        ip_address: ipAddress
+        ip_address: ipAddress,
+        user_id: userId
       });
 
     if (error) throw error;
@@ -267,6 +306,19 @@ export const votesService = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Get user's vote for a specific call
+  async getUserVote(callId: string, userId: string) {
+    const { data, error } = await supabase
+      .from('votes')
+      .select('vote_type')
+      .eq('call_id', callId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.vote_type || null;
   },
 
   // Get vote channel (without subscribing)

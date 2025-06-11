@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Settings, ExternalLink, Database, Wifi, WifiOff, Maximize2 } from 'lucide-react';
+import { Settings, ExternalLink, Database, Wifi, WifiOff, Maximize2, User, LogIn } from 'lucide-react';
 import CallSelector from './components/CallSelector';
 import EnhancedReplayCard from './components/EnhancedReplayCard';
 import LiveVotePanel from './components/LiveVotePanel';
@@ -7,8 +7,12 @@ import EnhancedStatsPanel from './components/EnhancedStatsPanel';
 import LiveCallsLoader from './components/LiveCallsLoader';
 import SettingsPanel from './components/SettingsPanel';
 import FullscreenView from './components/FullscreenView';
+import AuthModal from './components/AuthModal';
+import UserProfile from './components/UserProfile';
+import SubscriptionModal from './components/SubscriptionModal';
 import { mockCallsData, mockVotesData, mockPlayerStats } from './data/enhancedMockData';
 import { CallData } from './lib/supabase';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
   const [currentCallIndex, setCurrentCallIndex] = useState(0);
@@ -16,8 +20,12 @@ function App() {
   const [calls, setCalls] = useState<CallData[]>(mockCallsData);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
+  const { user, loading } = useAuth();
   const currentCall = calls[currentCallIndex];
   const currentVotes = mockVotesData[currentCall.id as keyof typeof mockVotesData] || { correct: 0, incorrect: 0, unclear: 0 };
 
@@ -43,6 +51,17 @@ function App() {
     setConnectionError(error);
     setIsConnected(false); // Fall back to demo mode
   }, []);
+
+  if (loading) {
+    return (
+      <div className="w-[400px] h-[600px] bg-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-slate-400">Loading NBA CallCheck...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -84,6 +103,23 @@ function App() {
               <button className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
                 <ExternalLink className="w-4 h-4 text-slate-400" />
               </button>
+              {user ? (
+                <button 
+                  onClick={() => setShowProfile(true)}
+                  className="p-2 rounded-lg bg-blue-800 hover:bg-blue-700 transition-colors"
+                  title="User Profile"
+                >
+                  <User className="w-4 h-4 text-blue-300" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setShowAuth(true)}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                  title="Sign In"
+                >
+                  <LogIn className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
               <button 
                 onClick={() => setShowSettings(true)}
                 className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
@@ -99,8 +135,15 @@ function App() {
               <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-400' : 'bg-yellow-400'}`} />
               {isConnected ? 'Live Data Connected' : 'Demo Mode - Mock Data'}
             </div>
-            <div className="text-slate-500">
-              v0.3.0
+            <div className="flex items-center space-x-2">
+              {user && (
+                <div className="text-blue-400">
+                  {user.email?.split('@')[0]}
+                </div>
+              )}
+              <div className="text-slate-500">
+                v0.3.0
+              </div>
             </div>
           </div>
 
@@ -179,7 +222,26 @@ function App() {
         </div>
       </div>
 
-      {/* Settings Panel */}
+      {/* Modals */}
+      <AuthModal
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+      />
+
+      <UserProfile
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        onOpenSubscription={() => {
+          setShowProfile(false);
+          setShowSubscription(true);
+        }}
+      />
+
+      <SubscriptionModal
+        isOpen={showSubscription}
+        onClose={() => setShowSubscription(false)}
+      />
+
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -189,7 +251,6 @@ function App() {
         onToggleFullscreen={toggleFullscreen}
       />
 
-      {/* Fullscreen View */}
       <FullscreenView
         isOpen={isFullscreen}
         onClose={() => setIsFullscreen(false)}

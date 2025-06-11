@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ThumbsUp, ThumbsDown, HelpCircle, TrendingUp, Users, Wifi, WifiOff } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, HelpCircle, TrendingUp, Users, Wifi, WifiOff, Lock } from 'lucide-react';
 import { votesService, getUserIP, supabase } from '../lib/supabaseClient';
+import { useAuth } from '../hooks/useAuth';
 
 interface LiveVotePanelProps {
   callId: string;
@@ -17,11 +18,13 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   isConnected, 
   fallbackVotes = { correct: 0, incorrect: 0, unclear: 0 }
 }) => {
+  const { user, hasFeatureAccess } = useAuth();
   const [userVote, setUserVote] = useState<string | null>(null);
   const [votes, setVotes] = useState(fallbackVotes);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalVoters, setTotalVoters] = useState(0);
+  const [dailyVoteCount, setDailyVoteCount] = useState(0);
   
   const total = votes.correct + votes.incorrect + votes.unclear;
   const percentages = {
@@ -29,6 +32,8 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
     incorrect: total > 0 ? Math.round((votes.incorrect / total) * 100) : 0,
     unclear: total > 0 ? Math.round((votes.unclear / total) * 100) : 0
   };
+
+  const canVote = hasFeatureAccess('unlimited_votes') || dailyVoteCount < 10;
 
   useEffect(() => {
     setTotalVoters(total);
@@ -49,6 +54,12 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
             incorrect: voteData.incorrect_votes,
             unclear: voteData.unclear_votes
           });
+        }
+
+        // Load user's existing vote if authenticated
+        if (user) {
+          const existingVote = await votesService.getUserVote(callId, user.id);
+          setUserVote(existingVote);
         }
       } catch (err) {
         console.error('Failed to load votes:', err);
@@ -80,10 +91,16 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         supabase.removeChannel(channel);
       }
     };
-  }, [callId, isConnected]);
+  }, [callId, isConnected, user]);
 
   const handleVote = async (voteType: 'correct' | 'incorrect' | 'unclear') => {
     if (isSubmitting || userVote === voteType) return;
+    
+    // Check voting limits for free users
+    if (!canVote) {
+      setError('Daily vote limit reached. Upgrade to Pro for unlimited voting.');
+      return;
+    }
     
     setIsSubmitting(true);
     setError(null);
@@ -92,7 +109,12 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
       if (isConnected) {
         // Real Supabase voting
         const ipAddress = await getUserIP();
-        await votesService.submitVote(callId, voteType, ipAddress);
+        await votesService.submitVote(callId, voteType, ipAddress, user?.id);
+        
+        // Update daily vote count for free users
+        if (!hasFeatureAccess('unlimited_votes')) {
+          setDailyVoteCount(prev => prev + 1);
+        }
       } else {
         // Mock voting for demo mode
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -120,7 +142,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
   const getVoteButtonClass = (voteType: string, baseColor: string) => {
     const isSelected = userVote === voteType;
-    const isDisabled = isSubmitting;
+    const isDisabled = isSubmitting || !canVote;
     
     if (isSelected) {
       return `bg-${baseColor}-600 border-${baseColor}-500 text-white`;
@@ -149,6 +171,16 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
       
       <p className="text-slate-300 text-sm mb-4">Was this the correct call?</p>
       
+      {/* Vote Limit Warning for Free Users */}
+      {!hasFeatureAccess('unlimited_votes') && (
+        <div className="mb-4 p-3 bg-yellow-900 border border-yellow-700 rounded-lg">
+          <div className="flex items-center text-yellow-300 text-sm">
+            <Lock className="w-4 h-4 mr-2" />
+            <span>Free Plan: {10 - dailyVoteCount} votes remaining today</span>
+          </div>
+        </div>
+      )}
+      
       {error && (
         <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg">
           <p className="text-red-300 text-sm">{error}</p>
@@ -159,7 +191,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         {/* Correct Button */}
         <button
           onClick={() => handleVote('correct')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !canVote}
           className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${getVoteButtonClass('correct', 'green')}`}
         >
           <div className="flex items-center">
@@ -180,7 +212,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         {/* Incorrect Button */}
         <button
           onClick={() => handleVote('incorrect')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !canVote}
           className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${getVoteButtonClass('incorrect', 'red')}`}
         >
           <div className="flex items-center">
@@ -201,7 +233,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         {/* Unclear Button */}
         <button
           onClick={() => handleVote('unclear')}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !canVote}
           className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${getVoteButtonClass('unclear', 'yellow')}`}
         >
           <div className="flex items-center">
