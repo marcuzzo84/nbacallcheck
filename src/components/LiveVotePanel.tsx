@@ -37,6 +37,8 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   useEffect(() => {
     if (!isConnected) return;
 
+    let subscription: any = null;
+
     // Load initial vote data
     const loadVotes = async () => {
       try {
@@ -57,18 +59,24 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
     loadVotes();
 
     // Subscribe to real-time updates
-    const subscription = votesService.subscribeToVotes(callId, (payload) => {
-      if (payload.new) {
-        setVotes({
-          correct: payload.new.correct_votes,
-          incorrect: payload.new.incorrect_votes,
-          unclear: payload.new.unclear_votes
-        });
-      }
-    });
+    try {
+      subscription = votesService.subscribeToVotes(callId, (payload) => {
+        if (payload.new) {
+          setVotes({
+            correct: payload.new.correct_votes,
+            incorrect: payload.new.incorrect_votes,
+            unclear: payload.new.unclear_votes
+          });
+        }
+      });
+    } catch (err) {
+      console.error('Failed to setup subscription:', err);
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
   }, [callId, isConnected]);
 
