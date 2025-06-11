@@ -269,8 +269,8 @@ export const votesService = {
     return data;
   },
 
-  // Subscribe to vote changes
-  subscribeToVotes(callId: string, callback: (payload: any) => void) {
+  // Get vote channel (without subscribing)
+  getVoteChannel(callId: string, callback: (payload: any) => void) {
     return supabase
       .channel(`vote_aggregates:call_id=eq.${callId}`)
       .on('postgres_changes', 
@@ -281,8 +281,7 @@ export const votesService = {
           filter: `call_id=eq.${callId}`
         }, 
         callback
-      )
-      .subscribe();
+      );
   }
 };
 

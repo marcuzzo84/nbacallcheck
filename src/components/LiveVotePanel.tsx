@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ThumbsUp, ThumbsDown, HelpCircle, TrendingUp, Users, Wifi, WifiOff } from 'lucide-react';
-import { votesService, getUserIP } from '../lib/supabaseClient';
+import { votesService, getUserIP, supabase } from '../lib/supabaseClient';
 
 interface LiveVotePanelProps {
   callId: string;
@@ -37,7 +37,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   useEffect(() => {
     if (!isConnected) return;
 
-    let subscription: any = null;
+    let channel: any = null;
 
     // Load initial vote data
     const loadVotes = async () => {
@@ -60,7 +60,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
     // Subscribe to real-time updates
     try {
-      subscription = votesService.subscribeToVotes(callId, (payload) => {
+      channel = votesService.getVoteChannel(callId, (payload) => {
         if (payload.new) {
           setVotes({
             correct: payload.new.correct_votes,
@@ -69,13 +69,15 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
           });
         }
       });
+      
+      channel.subscribe();
     } catch (err) {
       console.error('Failed to setup subscription:', err);
     }
 
     return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
+      if (channel) {
+        supabase.removeChannel(channel);
       }
     };
   }, [callId, isConnected]);
