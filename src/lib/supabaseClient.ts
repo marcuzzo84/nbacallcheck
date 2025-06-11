@@ -263,7 +263,7 @@ export const votesService = {
       .from('vote_aggregates')
       .select('*')
       .eq('call_id', callId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
