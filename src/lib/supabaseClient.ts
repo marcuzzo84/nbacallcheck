@@ -283,13 +283,17 @@ export const callsService = {
 export const votesService = {
   // Submit a vote (with user authentication support)
   async submitVote(callId: string, voteType: 'correct' | 'incorrect' | 'unclear', ipAddress?: string, userId?: string) {
+    // Use upsert to handle both new votes and vote updates
     const { data, error } = await supabase
       .from('votes')
-      .insert({
+      .upsert({
         call_id: callId,
         vote_type: voteType,
         ip_address: ipAddress,
         user_id: userId
+      }, {
+        // Set the conflict resolution based on whether we have a user_id or ip_address
+        onConflict: userId ? 'call_id,user_id' : 'call_id,ip_address'
       });
 
     if (error) throw error;
