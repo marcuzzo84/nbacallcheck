@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ThumbsUp, ThumbsDown, HelpCircle, TrendingUp, Users, Wifi, WifiOff, Lock } from 'lucide-react';
 import { votesService, getUserIP, supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
@@ -26,6 +26,9 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   const [totalVoters, setTotalVoters] = useState(0);
   const [dailyVoteCount, setDailyVoteCount] = useState(0);
   
+  // Use ref to store channel instance to prevent multiple subscriptions
+  const channelRef = useRef<any>(null);
+  
   const total = votes.correct + votes.incorrect + votes.unclear;
   const percentages = {
     correct: total > 0 ? Math.round((votes.correct / total) * 100) : 0,
@@ -42,7 +45,11 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
   useEffect(() => {
     if (!isConnected) return;
 
-    let channel: any = null;
+    // Clean up existing channel before creating a new one
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
 
     // Load initial vote data
     const loadVotes = async () => {
@@ -71,7 +78,7 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
 
     // Subscribe to real-time updates
     try {
-      channel = votesService.getVoteChannel(callId, (payload) => {
+      channelRef.current = votesService.getVoteChannel(callId, (payload) => {
         if (payload.new) {
           setVotes({
             correct: payload.new.correct_votes,
@@ -81,14 +88,15 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
         }
       });
       
-      channel.subscribe();
+      channelRef.current.subscribe();
     } catch (err) {
       console.error('Failed to setup subscription:', err);
     }
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
   }, [callId, isConnected, user]);
@@ -132,6 +140,8 @@ const LiveVotePanel: React.FC<LiveVotePanelProps> = ({
       console.error('Error submitting vote:', err);
       if (err.message?.includes('duplicate key')) {
         setError('You have already voted on this call');
+      } else if (err.message?.includes('row-level security')) {
+        setError('Unable to process vote. Please try again later.');
       } else {
         setError('Failed to submit vote. Please try again.');
       }
