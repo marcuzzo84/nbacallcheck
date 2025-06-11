@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "NBA CallCheck",
+  "version": "0.1.0",
+  "description": "Transparency tool for NBA referee calls - analyze, vote, and understand game decisions",
+  "permissions": [
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "NBA CallCheck",
+    "default_icon": {
+      "16": "vite.svg",
+      "48": "vite.svg",
+      "128": "vite.svg"
+    }
+  },
+  "icons": {
+    "16": "vite.svg",
+    "48": "vite.svg",
+    "128": "vite.svg"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
